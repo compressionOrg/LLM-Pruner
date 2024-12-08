@@ -36,9 +36,10 @@ def main(args):
         setup_sublogger=True
     )
 
-    tokenizer = LlamaTokenizer.from_pretrained(args.base_model)
+    tokenizer = LlamaTokenizer.from_pretrained(args.base_model, cache_dir="llm_weights")
     model = LlamaForCausalLM.from_pretrained(
         args.base_model,
+        cache_dir="llm_weights",
         low_cpu_mem_usage=True if args.torch_version >=1.9 else False
     )
     if args.device != "cpu":
@@ -91,7 +92,140 @@ def main(args):
         raise NotImplementedError
 
     logger.log("Use {} pruner...".format(pruner_type))
-    
+    dlp_ratios_2 = [
+    0.08829176425933838,
+    0.09887862205505371,
+    0.11017858982086182,
+    0.1217239499092102,
+    0.12973541021347046,
+    0.13950258493423462,
+    0.14501523971557617,
+    0.14977192878723145,
+    0.15469902753829956,
+    0.1586087942123413,
+    0.16449898481369019,
+    0.16896402835845947,
+    0.17757689952850342,
+    0.18264490365982056,
+    0.18783384561538696,
+    0.19411462545394897,
+    0.203144371509552,
+    0.2132396101951599,
+    0.2201579213142395,
+    0.22636330127716064,
+    0.23689061403274536,
+    0.24227768182754517,
+    0.245671808719635,
+    0.2526448369026184,
+    0.2572872042655945,
+    0.2643764019012451,
+    0.26925015449523926,
+    0.2720736265182495,
+    0.27710360288619995,
+    0.28329938650131226,
+    0.2882917523384094,
+    0.2758883237838745]
+
+    dlp_ratios_4 = [
+        0.26595014333724976,
+    0.2786543369293213,
+    0.2922143340110779,
+    0.3060687184333801,
+    0.3156825304031372,
+    0.32740283012390137,
+    0.3340179920196533,
+    0.3397263288497925,
+    0.34563887119293213,
+    0.35033029317855835,
+    0.35739850997924805,
+    0.362756609916687,
+    0.37309199571609497,
+    0.3791735768318176,
+    0.38540059328079224,
+    0.39293724298477173,
+    0.4037729501724243,
+    0.4158872365951538,
+    0.4241895079612732,
+    0.43163567781448364,
+    0.44426900148391724,
+    0.4507332444190979,
+    0.45480644702911377,
+    0.46317386627197266,
+    0.4687449336051941,
+    0.4772522449493408,
+    0.4831007719039917,
+    0.48648834228515625,
+    0.49252432584762573,
+    0.49995923042297363,
+    0.5059501528739929,
+    0.49106621742248535]
+
+    dlp_ratios_6 = [
+    0.48829180002212524,
+    0.4988786578178406,
+    0.5101786255836487,
+    0.5217239558696747,
+    0.5297354459762573,
+    0.5395023822784424,
+    0.5450150370597839,
+    0.5497719645500183,
+    0.5546990633010864,
+    0.5586085915565491,
+    0.564498782157898,
+    0.5689638257026672,
+    0.5775766670703888,
+    0.5826446712017059,
+    0.5878338813781738,
+    0.5941144227981567,
+    0.6031441688537598,
+    0.6132394075393677,
+    0.620157927274704,
+    0.6263630986213684,
+    0.6368908584117889,
+    0.642277717590332,
+    0.6456720530986786,
+    0.6526448726654053,
+    0.6572874784469604,
+    0.6643769145011902,
+    0.6692506670951843,
+    0.6720736622810364,
+    0.6771036088466644,
+    0.6832993924617767,
+    0.6882917881011963,
+    0.6758885681629181]
+    dlp_ratios_8 = [
+    0.6324377059936523,
+    0.6483179330825806,
+    0.6652679443359375,
+    0.6825858950614929,
+    0.6946031451225281,
+    0.709253579378128,
+    0.7175225615501404,
+    0.7246579229831696,
+    0.7320486009120941,
+    0.7379128932952881,
+    0.746748149394989,
+    0.7534457445144653,
+    0.7663650065660477,
+    0.7739670127630234,
+    0.7817507982254028,
+    0.791171595454216,
+    0.8047162443399429,
+    0.8198590874671936,
+    0.8302368968725204,
+    0.8395446538925171,
+    0.8553362637758255,
+    0.8634165972471237,
+    0.8685080707073212,
+    0.878967322409153,
+    0.8859312161803246,
+    0.8965653628110886,
+    0.9038759768009186,
+    0.9081104621291161,
+    0.9156554266810417,
+    0.9249490946531296,
+    0.9324377030134201,
+    0.9138328433036804]
     if args.block_wise:
         kwargs = {
             "importance": imp,
@@ -101,6 +235,9 @@ def main(args):
             "ignored_layers":[],
             "channel_groups": {
             },
+            # "ch_sparsity_dict": {
+            #     item: dlp_ratios_4[i] // 3 for i in range(args.block_attention_layer_start, args.block_attention_layer_end) for item in [model.model.layers[i].self_attn.q_proj, model.model.layers[i].self_attn.k_proj, model.model.layers[i].self_attn.v_proj]
+            # },
             "consecutive_groups": {
                 layer.self_attn.q_proj: layer.self_attn.head_dim for layer in model.model.layers
             },
@@ -272,7 +409,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Pruning LLaMA (huggingface version)')
 
     # argument for parsing
-    parser.add_argument('--base_model', type=str, default="decapoda-research/llama-7b-hf", help='base model name')
+    parser.add_argument('--base_model', type=str, default="Enoch/llama-7b-hf", help='base model name')
     parser.add_argument('--save_ckpt_log_name', type=str, default="llama_prune", help='the path for save the checkpoint and the log. The final path would be log/{your_name_here}_{pruner_type}_{pruning_ratio}')
     parser.add_argument('--pruning_ratio', type=float, default=0.5, help='pruning ratio')
     parser.add_argument('--pruner_type', type=str, default='l2', help='pruner type')
@@ -286,7 +423,7 @@ if __name__ == "__main__":
     parser.add_argument('--channel_wise', action='store_true', help='channel wise')
     parser.add_argument('--block_wise', action='store_true', help='block wise')
     parser.add_argument('--layer_wise', action='store_true', help='layer wise')
-    parser.add_argument('--layer', type=int, default=12, help='remain the previous n layers')
+    parser.add_argument('--layer', type=int, default=32, help='remain the previous n layers')
 
     parser.add_argument('--block_attention_layer_start', type=int, help='start layer of block attention layers', default=3)
     parser.add_argument('--block_attention_layer_end', type=int, help='end layer of block attention layers', default=31)
